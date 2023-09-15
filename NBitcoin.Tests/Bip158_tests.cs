@@ -19,10 +19,13 @@ namespace NBitcoin.Tests
 			var key = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
 			var filter = GolombRiceFilter.Build(key, names, 0x10);
 
+			var reader = filter.GetGRStreamReader();
+			
 			// The filter should match all ther values that were added.
 			foreach (var name in names)
 			{
 				Assert.True(filter.Match(name, key));
+				Assert.True(filter.Match(name, key, reader));
 			}
 
 			// The filter should NOT match any extra value.

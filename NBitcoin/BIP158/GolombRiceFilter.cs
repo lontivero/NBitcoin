@@ -96,13 +96,22 @@ namespace NBitcoin
 			return bitArray;
 		}
 
-
 		public bool Match(byte[] data, byte[] key)
 		{
-			return MatchAny(new []{data}, key);
+			return Match(data, key, new GRCodedStreamReader(new BitStream(Data), P, 0));
+		}
+		
+		public bool Match(byte[] data, byte[] key, GRCodedStreamReader reader)
+		{
+			return MatchAny(new []{data}, key, reader);
 		}
 
 		public bool MatchAny(IEnumerable<byte[]> data, byte[] key)
+		{
+			return MatchAny(data, key, new GRCodedStreamReader(new BitStream(Data), P, 0));
+		}
+		
+		public bool MatchAny(IEnumerable<byte[]> data, byte[] key, GRCodedStreamReader reader)
 		{
 			if (data == null || !data.Any())
 				throw new ArgumentException("data can not be null or empty array", nameof(data));
@@ -112,9 +121,6 @@ namespace NBitcoin
 			var lastValue1 = 0UL;
 			var lastValue2 = hs[0];
 			var i = 1;
-
-			var bitStream = new BitStream(Data);
-			var sr = new GRCodedStreamReader(bitStream, P, 0);
 
 			try
 			{
@@ -134,17 +140,22 @@ namespace NBitcoin
 					}
 					else if (lastValue2 > lastValue1)
 					{
-						var val = sr.Read();
+						var val = reader.Read();
 						lastValue1 = val;
 					}
 				}
+				reader.ResetPosition();
 			}
 			catch (ArgumentOutOfRangeException) // end-of-stream 
 			{
 				return false;
 			}
-
 			return true;
+		}
+		
+		public CachedGRCodedStreamReader GetGRStreamReader()
+		{
+			return new CachedGRCodedStreamReader(new BitStream(Data), P, 0);
 		}
 
 		internal static ulong FastReduction(ulong value, ulong nhi, ulong nlo)

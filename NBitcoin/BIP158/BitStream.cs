@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace NBitcoin
 {
@@ -96,14 +97,40 @@ namespace NBitcoin
 		}
 	}
 
-	internal class GRCodedStreamReader
+	public class CachedGRCodedStreamReader : GRCodedStreamReader
+	{
+		private List<ulong> _cachedValues;
+		private int _position;
+
+		internal CachedGRCodedStreamReader(BitStream stream, byte p, ulong lastValue) : base(stream, p, lastValue)
+		{
+			_cachedValues = new List<ulong>(10_000);
+			_position = 0;
+		}
+
+		public override ulong Read()
+		{
+			if (_position >= _cachedValues.Count)
+			{
+				_cachedValues.Add(base.Read());
+			}
+			return _cachedValues[_position++];
+		}
+
+		internal override void ResetPosition()
+		{
+			_position = 0;
+		}
+	}
+	
+	public class GRCodedStreamReader
 	{
 		private readonly BitStream _stream;
 		private readonly byte _p;
 		private readonly ulong _modP;
 		private ulong _lastValue;
 
-		public GRCodedStreamReader(BitStream stream, byte p, ulong lastValue)
+		internal GRCodedStreamReader(BitStream stream, byte p, ulong lastValue)
 		{
 			_stream = stream;
 			_p = p;
@@ -111,13 +138,15 @@ namespace NBitcoin
 			_lastValue = lastValue;
 		}
 
-		public ulong Read()
+		public virtual ulong Read()
 		{
 			var currentValue = _lastValue + ReadUInt64();
 			_lastValue = currentValue;
 			return currentValue;
 		}
 
+		internal virtual void ResetPosition () {}
+		
 		private ulong ReadUInt64()
 		{
 			var count = 0UL;
